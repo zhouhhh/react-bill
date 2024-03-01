@@ -1,13 +1,41 @@
 import { NavBar, DatePicker } from 'antd-mobile'
 import './index.scss'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import classNames from 'classnames'
+import dayjs from 'dayjs'
+import { useSelector } from 'react-redux'
+import _ from 'lodash'
 
 const Month = () => {
+    //按月做数据分组
+    const billList = useSelector(state => state.bill.billList)
+    const monthGroup = useMemo(() => {
+        return _.groupBy(billList, (item) => dayjs(item.date).format('YYYY-MM'))
+    }, [billList])
+
+    //控制日期弹框的显示隐藏
     const [dateVisible, setDateVisible] = useState(false)
 
-    const onConfirm = () => {
+    // 控制时间显示
+    const [currentDate, setCurrentDate] = useState(() => {
+        return dayjs(new Date()).format('YYYY-MM')
+    })
+    const [currentMonthList, setCurrentMonthList] = useState([])
+    const monthResult = useMemo(() => {
+        const pay = currentMonthList.filter(item => item.type === 'pay').reduce((a, b) => a + b.money, 0)
+        const imcome = currentMonthList.filter(item => item.type === 'imcome').reduce((a, b) => a + b.money, 0)
+        return {
+            pay,
+            imcome,
+            total: pay + imcome
+        }
+    }, [currentMonthList])
+    //日期弹框的确认事件
+    const onConfirm = (date) => {
         setDateVisible(false)
+        const formatDate = dayjs(date).format('YYYY-MM')
+        setCurrentMonthList(monthGroup[formatDate] || [])
+        setCurrentDate(formatDate)
     }
     return (
         <div className="monthlyBill">
@@ -19,7 +47,7 @@ const Month = () => {
                     {/* 时间切换区域 */}
                     <div className="date" onClick={() => setDateVisible(true)}>
                         <span className="text">
-                            2023 | 3月账单
+                            {currentDate + ''}月账单
                         </span>
                         {/*箭头控制,根据类名控制箭头朝向*/}
                         <span className={classNames('arrow', dateVisible && 'expand')}></span>
@@ -27,15 +55,15 @@ const Month = () => {
                     {/* 统计区域 */}
                     <div className='twoLineOverview'>
                         <div className="item">
-                            <span className="money">100</span>
+                            <span className="money">{monthResult.pay.toFixed(2)}</span>
                             <span className="type">支出</span>
                         </div>
                         <div className="item">
-                            <span className="money">200</span>
+                            <span className="money">{monthResult.imcome.toFixed(2)}</span>
                             <span className="type">收入</span>
                         </div>
                         <div className="item">
-                            <span className="money">50</span>
+                            <span className="money">{monthResult.total.toFixed(2)}</span>
                             <span className="type">结余</span>
                         </div>
                     </div>

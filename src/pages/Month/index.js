@@ -1,14 +1,16 @@
 import { NavBar, DatePicker } from 'antd-mobile'
 import './index.scss'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import classNames from 'classnames'
 import dayjs from 'dayjs'
 import { useSelector } from 'react-redux'
 import _ from 'lodash'
+import DayBill from './components/DayBill'
 
 const Month = () => {
     //按月做数据分组
     const billList = useSelector(state => state.bill.billList)
+    //按月分组
     const monthGroup = useMemo(() => {
         return _.groupBy(billList, (item) => dayjs(item.date).format('YYYY-MM'))
     }, [billList])
@@ -23,13 +25,22 @@ const Month = () => {
     const [currentMonthList, setCurrentMonthList] = useState([])
     const monthResult = useMemo(() => {
         const pay = currentMonthList.filter(item => item.type === 'pay').reduce((a, b) => a + b.money, 0)
-        const imcome = currentMonthList.filter(item => item.type === 'imcome').reduce((a, b) => a + b.money, 0)
+        const income = currentMonthList.filter(item => item.type === 'income').reduce((a, b) => a + b.money, 0)
         return {
             pay,
-            imcome,
-            total: pay + imcome
+            income,
+            total: pay + income
         }
     }, [currentMonthList])
+
+    //初始渲染账单数据
+    useEffect(() => {
+        const nowDate = dayjs().format('YYYY-MM')
+        if (monthGroup[nowDate]) {
+            setCurrentMonthList(monthGroup[nowDate])
+        }
+    }, [monthGroup])
+
     //日期弹框的确认事件
     const onConfirm = (date) => {
         setDateVisible(false)
@@ -37,6 +48,16 @@ const Month = () => {
         setCurrentMonthList(monthGroup[formatDate] || [])
         setCurrentDate(formatDate)
     }
+
+    //按日分组
+    const dayGroup = useMemo(() => {
+        const groupData = _.groupBy(currentMonthList, (item) => dayjs(item.date).format('YYYY-MM-DD'))
+        const keys = Object.keys(groupData)
+        return {
+            groupData,
+            keys
+        }
+    }, [currentMonthList])
     return (
         <div className="monthlyBill">
             <NavBar className="nav" backArrow={false}>
@@ -59,7 +80,7 @@ const Month = () => {
                             <span className="type">支出</span>
                         </div>
                         <div className="item">
-                            <span className="money">{monthResult.imcome.toFixed(2)}</span>
+                            <span className="money">{monthResult.income.toFixed(2)}</span>
                             <span className="type">收入</span>
                         </div>
                         <div className="item">
@@ -81,10 +102,10 @@ const Month = () => {
                 </div>
                 {/*单日列表统计*/}
                 {
-                    // dayGroup.keys.map(day => {
-                    //     console.log(dayGroup.groupData[day])
-                    //     return <DayBill key={day} date={day} billList={dayGroup.groupData[day]} />
-                    // })
+                    dayGroup.keys.map(day => {
+                        console.log(dayGroup.groupData[day])
+                        return <DayBill key={day} date={day} billList={dayGroup.groupData[day]} />
+                    })
                 }
 
             </div>
